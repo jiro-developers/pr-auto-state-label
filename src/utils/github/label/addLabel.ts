@@ -4,8 +4,8 @@ import { getGithubContext } from '@/utils/github/context/getGithubContext';
 import { logger } from '@/utils/github/logger';
 
 interface AddLabelProps {
-  token: string;
-  labelList: string[];
+  token: string; // GitHub 토큰
+  labelList: string[]; // 추가할 라벨 목록
 }
 
 const addLabel = async ({ token, labelList }: AddLabelProps) => {
