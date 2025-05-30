@@ -1,0 +1,21 @@
+name: "pr-auto-state-label"
+description: "pr-auto-state-label"
+
+branding:
+  icon: "bell"
+  color: "white"
+
+inputs:
+  token:
+    description: "GitHub token"
+    required: true
+  tag:
+    description: "특정 조건에 입력이 될 태그 목록 입니다 자세한 형태소는 readme를 참고해주세요."
+    required: true
+  skipDeleteTagList:
+    description: "삭제에서 제외될 태그 목록입니다. glob 패턴을 지원합니다."
+    required: false
+
+runs:
+  using: "node16"
+  main: "dist/index.js"

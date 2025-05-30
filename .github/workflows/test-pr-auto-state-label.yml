@@ -1,0 +1,29 @@
+name: pr-auto-state-label
+
+on:
+  pull_request_review:
+    types: [ submitted ]
+
+
+jobs:
+  pr-auto-state-label:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: pr-auto-state-label
+        uses: ./
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: >
+            { 
+              "comment": "https://www.google.com/search?q=<target>",
+              "requestChange": "DD-"
+              "approve": "DD-"
+            }
+          skipDeleteTagList: >
+            [
+              "D-*",
+              'hotfix'
+            ]
