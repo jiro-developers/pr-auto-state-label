@@ -16,14 +16,10 @@ jobs:
         uses: ./
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: >
+          label: >
             { 
-              "comment": "https://www.google.com/search?q=<target>",
-              "requestChange": "DD-"
-              "approve": "DD-"
+              "comment": "리뷰 완료",
+              "requestChange": "병합 보류",
+              "approve": "Approve"
             }
-          skipDeleteTagList: >
-            [
-              "D-*",
-              'hotfix'
-            ]
+          deleteLabelPattern: "{D-*,hotfix}"
