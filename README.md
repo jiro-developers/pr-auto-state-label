@@ -2,10 +2,7 @@
 
 ## Usage
 
-1. 메시지 전달을 위해 **SLACK_WEBHOOK_URL** 이름의 secret을 설정하세요.
-    - Repository Settings > Secrets > New repository secret
-
-2. `.github/workflows/release-notification-action.yml` 파일을 생성하고, 아래 [Example](#example)처럼 작성하세요.
+1. `.github/workflows/test-pr-auto-state-label.yml` 파일을 생성하고, 아래 [Example](#example)처럼 작성하세요.
 
 ## Inputs
 
