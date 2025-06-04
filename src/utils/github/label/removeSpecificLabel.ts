@@ -3,14 +3,14 @@ import * as github from '@actions/github';
 import { getGithubContext } from '@/utils/github/context/getGithubContext';
 import { logger } from '@/utils/github/logger';
 
-const removeLabel = (token: string) => {
+const removeSpecificLabel = (token: string) => {
   const octokit = github.getOctokit(token);
   const {
     issue: { owner, repo },
     payload: { pull_request: { number: pullRequestNumber } = {} },
   } = getGithubContext();
 
-  const removeSpecificLabel = (label: string) => {
+  return (label: string) => {
     // PR 번호가 없는 경우 오류를 기록하고 종료합니다.
     if (!pullRequestNumber) {
       logger.error({
@@ -28,8 +28,6 @@ const removeLabel = (token: string) => {
       name: label,
     });
   };
-
-  return { removeSpecificLabel };
 };
 
-export { removeLabel };
+export { removeSpecificLabel };
