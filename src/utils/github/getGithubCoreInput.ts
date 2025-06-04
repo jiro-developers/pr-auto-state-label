@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 
-import { ACTION_INPUT_KEY_LIST, ACTION_REQUIRED_INPUT_KEY_LIST } from '@/constants/common';
+import { ACTION_INPUT_KEY_LIST, REQUIRED_ACTION_INPUT_KEY_LIST } from '@/constants/common';
 import type { OptionalActionInputKey, RequiredActionInputKey } from '@/types';
 import { logger } from '@/utils/github/logger';
 
@@ -14,7 +14,7 @@ const getGithubCoreInput = () => {
   logger.info(result);
 
   // 필수 입력값 중 빠진 것이 있는지 확인합니다.
-  const missingInputKeyList = ACTION_REQUIRED_INPUT_KEY_LIST.filter((key) => !result[key]);
+  const missingInputKeyList = REQUIRED_ACTION_INPUT_KEY_LIST.filter((key) => !result[key]);
 
   // 필수 입력값이 빠진 경우 오류를 기록하고 null을 반환합니다.
   if (missingInputKeyList.length) {
