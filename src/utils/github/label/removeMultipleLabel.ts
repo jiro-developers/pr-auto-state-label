@@ -1,5 +1,5 @@
 import { getAllLabel } from '@/utils/github/label/getAllLabel';
-import { removeLabel } from '@/utils/github/label/removeLabel';
+import { removeSpecificLabel } from '@/utils/github/label/removeSpecificLabel';
 import { logger } from '@/utils/github/logger';
 
 interface RemoveLabelProps {
@@ -9,7 +9,7 @@ interface RemoveLabelProps {
 }
 
 const removeMultipleLabel = async ({ token, deleteLabelPattern, additionalRemoveLabelList = [] }: RemoveLabelProps) => {
-  const { removeSpecificLabel } = removeLabel(token);
+  const removeLabel = removeSpecificLabel(token);
 
   // 패턴이 제공된 경우, 해당 패턴에 맞는 라벨을 모두 찾아 제거합니다.
   if (deleteLabelPattern) {
@@ -33,7 +33,7 @@ const removeMultipleLabel = async ({ token, deleteLabelPattern, additionalRemove
 
     // 각 라벨에 대해 제거 작업을 준비합니다.
     const buildRemoveMultipleLabel = labelsToRemove.map((label) => {
-      return removeSpecificLabel(label);
+      return removeLabel(label);
     });
 
     // 모든 라벨 제거 작업을 병렬로 실행합니다.
