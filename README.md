@@ -1,4 +1,4 @@
-# pr-auto-state-label
+# pr-auto-state-label.
 
 ## Usage
 
