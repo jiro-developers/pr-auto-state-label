@@ -1,4 +1,4 @@
-# pr-auto-state-label.
+# pr-auto-state-label
 
 ## Usage
 
@@ -58,7 +58,7 @@ jobs:
 ```
 
 ## Flow chart
-![img.png](https://private-user-images.githubusercontent.com/67212771/449085259-e7a3b956-814e-45a9-beeb-25e41f077381.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDkwMTQ2MjQsIm5iZiI6MTc0OTAxNDMyNCwicGF0aCI6Ii82NzIxMjc3MS80NDkwODUyNTktZTdhM2I5NTYtODE0ZS00NWE5LWJlZWItMjVlNDFmMDc3MzgxLnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTA2MDQlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwNjA0VDA1MTg0NFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTAwNmE4MzFlYjRlNGYzM2M5NDI2OGM2YzMwNTJmMGU1YjhmYmQ0YzI0YjQ2OGRmYTkyNzNmNWQ1MzcwYWUwZmYmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.AVKGJTKivMVcRN-vl4VnwgJMlQKFnzbZkBjMKLbjSBs)
+![img.png](flowchart.png)
 
 ## License
 
