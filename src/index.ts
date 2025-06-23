@@ -28,7 +28,7 @@ const run = async (): Promise<void> => {
 
     const [previousReviewState, lastReviewState] = reviewList.slice(-2).map((review) => review.state as ReviewState);
 
-    if (!lastReviewState) {
+    if (!previousReviewState && !lastReviewState) {
       logger.error('Last review state is undefined. Action cannot proceed.');
 
       return;
@@ -45,8 +45,8 @@ const run = async (): Promise<void> => {
 
     await processReviewState({
       token,
-      reviewState: lastReviewState,
-      previousReviewState: previousReviewState,
+      reviewState: lastReviewState ?? previousReviewState,
+      previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
       parseLabel,
       allLabelList,
       deleteLabelPattern,
