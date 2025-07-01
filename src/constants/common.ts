@@ -17,6 +17,7 @@ const REQUIRED_ACTION_INPUT_KEY_LIST: RequiredActionInputKey[] = [
 
 const OPTIONAL_ACTION_INPUT_KEY_LIST: OptionalActionInputKey[] = [
   'deleteLabelPattern', // globPattern -> 삭제하지 않을 라벨 목록
+  'skipReviewerNamePattern', // globPattern -> 해당 액션을 실행 시키지 않을 리뷰어 이름 패턴
 ] as const;
 
 const ACTION_INPUT_KEY_LIST: ActionInputKey[] = [...REQUIRED_ACTION_INPUT_KEY_LIST, ...OPTIONAL_ACTION_INPUT_KEY_LIST];
