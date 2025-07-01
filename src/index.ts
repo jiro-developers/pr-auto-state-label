@@ -1,3 +1,5 @@
+import { minimatch } from 'minimatch';
+
 import { DEFAULT_REVIEW_STATE } from '@/constants/common';
 import type { ReviewState } from '@/types';
 import { getAllLabel } from '@/utils/github/label/getAllLabel';
@@ -16,7 +18,7 @@ const run = async (): Promise<void> => {
       return;
     }
 
-    const { token, parseLabel, deleteLabelPattern } = inputList;
+    const { token, parseLabel, deleteLabelPattern, skipReviewerNamePattern } = inputList;
 
     const reviewList = await getReviewListWithPaginate({ token });
 
@@ -26,7 +28,30 @@ const run = async (): Promise<void> => {
       return;
     }
 
-    const [previousReviewState, lastReviewState] = reviewList.slice(-2).map((review) => review.state as ReviewState);
+    const [previousReview, lastReview] = reviewList.slice(-2).map((review) => ({
+      user: review?.user?.login,
+      state: review.state as ReviewState,
+    }));
+
+    const previousReviewer = previousReview.user;
+    const lastReviewer = lastReview.user;
+
+    const previousReviewState = previousReview?.state;
+    const lastReviewState = lastReview?.state;
+
+    const reviewerName = lastReviewer ?? previousReviewer;
+
+    if (skipReviewerNamePattern && reviewerName) {
+      const isMatch = minimatch(reviewerName, skipReviewerNamePattern);
+
+      const message = `Reviewer name "${reviewerName}" ${isMatch ? 'matches' : 'does not match'} the skip pattern "${skipReviewerNamePattern}".`;
+
+      logger.info(`${message} ${isMatch ? 'Action will not proceed.' : 'Proceeding with action.'}`);
+
+      if (isMatch) {
+        return;
+      }
+    }
 
     if (!previousReviewState && !lastReviewState) {
       logger.error('Last review state is undefined. Action cannot proceed.');
