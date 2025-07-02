@@ -32124,35 +32124,6 @@ var __webpack_exports__ = {};
 // ESM COMPAT FLAG
 __nccwpck_require__.r(__webpack_exports__);
 
-;// CONCATENATED MODULE: ./src/constants/common.ts
-/**
- * 액션에서 필수적으로 사용되는 입력되어야 할 키 값입니다.
- * **/
-const REQUIRED_ACTION_INPUT_KEY_LIST = [
-    'token', // GitHub Token
-    /**
-     *  label:{
-     *     comment: string[] | string
-     *     requestChange: string[] | string
-     *     approve: string[] | string
-     *   },
-     **/
-    'label',
-];
-const OPTIONAL_ACTION_INPUT_KEY_LIST = [
-    'deleteLabelPattern', // globPattern -> 삭제하지 않을 라벨 목록
-];
-const ACTION_INPUT_KEY_LIST = [...REQUIRED_ACTION_INPUT_KEY_LIST, ...OPTIONAL_ACTION_INPUT_KEY_LIST];
-const REVIEW_STATE = {
-    approve: 'APPROVED',
-    requestChange: 'CHANGES_REQUESTED',
-    comment: 'COMMENTED',
-};
-const DEFAULT_REVIEW_STATE = 'unknown';
-
-
-// EXTERNAL MODULE: ./node_modules/.pnpm/@actions+github@6.0.1/node_modules/@actions/github/lib/github.js
-var github = __nccwpck_require__(9848);
 // EXTERNAL MODULE: ./node_modules/.pnpm/brace-expansion@2.0.1/node_modules/brace-expansion/index.js
 var brace_expansion = __nccwpck_require__(4231);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/minimatch@10.0.1/node_modules/minimatch/dist/esm/assert-valid-pattern.js
@@ -33946,6 +33917,36 @@ minimatch.Minimatch = Minimatch;
 minimatch.escape = escape_escape;
 minimatch.unescape = unescape_unescape;
 //# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./src/constants/common.ts
+/**
+ * 액션에서 필수적으로 사용되는 입력되어야 할 키 값입니다.
+ * **/
+const REQUIRED_ACTION_INPUT_KEY_LIST = [
+    'token', // GitHub Token
+    /**
+     *  label:{
+     *     comment: string[] | string
+     *     requestChange: string[] | string
+     *     approve: string[] | string
+     *   },
+     **/
+    'label',
+];
+const OPTIONAL_ACTION_INPUT_KEY_LIST = [
+    'deleteLabelPattern', // globPattern -> 삭제하지 않을 라벨 목록
+    'skipReviewerNamePattern', // globPattern -> 해당 액션을 실행 시키지 않을 리뷰어 이름 패턴
+];
+const ACTION_INPUT_KEY_LIST = [...REQUIRED_ACTION_INPUT_KEY_LIST, ...OPTIONAL_ACTION_INPUT_KEY_LIST];
+const REVIEW_STATE = {
+    approve: 'APPROVED',
+    requestChange: 'CHANGES_REQUESTED',
+    comment: 'COMMENTED',
+};
+const DEFAULT_REVIEW_STATE = 'unknown';
+
+
+// EXTERNAL MODULE: ./node_modules/.pnpm/@actions+github@6.0.1/node_modules/@actions/github/lib/github.js
+var github = __nccwpck_require__(9848);
 ;// CONCATENATED MODULE: ./src/utils/github/context/getGithubContext.ts
 
 /**
@@ -34261,7 +34262,7 @@ const validateGithubInputList = () => {
         return null;
     }
     // 입력값에서 필요한 항목을 추출합니다.
-    const { token, label, deleteLabelPattern } = inputList;
+    const { token, label, deleteLabelPattern, skipReviewerNamePattern } = inputList;
     // 라벨 JSON 문자열을 파싱합니다.
     const parseLabel = safeJsonParse(label);
     // 라벨 파싱이 실패한 경우 오류를 기록하고 null을 반환합니다.
@@ -34274,13 +34275,15 @@ const validateGithubInputList = () => {
         message: 'Inputs received successfully.',
         label,
         deleteLabelPattern,
+        skipReviewerNamePattern,
     });
     // 검증된 입력값을 반환합니다.
-    return { token, parseLabel, deleteLabelPattern };
+    return { token, parseLabel, deleteLabelPattern, skipReviewerNamePattern };
 };
 
 
 ;// CONCATENATED MODULE: ./src/index.ts
+
 
 
 
@@ -34294,27 +34297,61 @@ const run = async () => {
         if (!inputList) {
             return;
         }
-        const { token, parseLabel, deleteLabelPattern } = inputList;
+        const { token, parseLabel, deleteLabelPattern, skipReviewerNamePattern } = inputList;
         const reviewList = await getReviewListWithPaginate({ token });
         if (!reviewList?.length) {
             logger.info('No reviews found for this PR. No action needed.');
             return;
         }
-        const [previousReviewState, lastReviewState] = reviewList.slice(-2).map((review) => review.state);
-        if (!previousReviewState && !lastReviewState) {
-            logger.error('Last review state is undefined. Action cannot proceed.');
+        const recentReviewList = reviewList.slice(-2).map((review) => ({
+            user: review?.user?.login,
+            state: review.state,
+        }));
+        const [previousReview, currentReview] = recentReviewList;
+        // 리뷰어 정보 추출
+        const previousReviewerName = previousReview?.user;
+        const currentReviewerName = currentReview?.user;
+        // 리뷰 상태 추출
+        const previousReviewState = previousReview?.state;
+        const currentReviewState = currentReview?.state;
+        // 현재 리뷰어 우선, 없으면 이전 리뷰어 사용
+        const activeReviewerName = currentReviewerName ?? previousReviewerName;
+        // 리뷰어 이름 패턴 검사
+        if (skipReviewerNamePattern && activeReviewerName) {
+            const isSkipPatternMatch = minimatch(activeReviewerName, skipReviewerNamePattern);
+            const patternMatchMessage = `Reviewer name "${activeReviewerName}" ${isSkipPatternMatch ? 'matches' : 'does not match'} the skip pattern "${skipReviewerNamePattern}".`;
+            logger.info(`${patternMatchMessage} ${isSkipPatternMatch ? 'Action will not proceed.' : 'Proceeding with action.'}`);
+            if (isSkipPatternMatch) {
+                return;
+            }
+        }
+        if (!currentReviewState) {
+            logger.info({
+                message: 'No current review state to process',
+                previousReviewState,
+            });
+            return;
+        }
+        // 현재 리뷰 상태와 이전 리뷰 상태가 동일한지 확인
+        if (currentReviewState === previousReviewState) {
+            logger.info({
+                message: 'Review state unchanged since last processing',
+                reviewState: currentReviewState,
+            });
             return;
         }
         logger.info({
-            message: 'Review states retrieved.',
-            lastReviewState,
-            beforeReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
-            reviewCount: reviewList.length,
+            message: 'Review states retrieved successfully.',
+            reviewState: currentReviewState,
+            previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
+            totalReviewCount: reviewList.length,
         });
+        // 모든 라벨 조회
         const allLabelList = await getAllLabel({ token });
+        // 리뷰 상태 처리 실행
         await processReviewState({
             token,
-            reviewState: lastReviewState ?? previousReviewState,
+            reviewState: currentReviewState,
             previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
             parseLabel,
             allLabelList,

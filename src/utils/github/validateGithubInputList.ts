@@ -18,7 +18,7 @@ const validateGithubInputList = () => {
   }
 
   // 입력값에서 필요한 항목을 추출합니다.
-  const { token, label, deleteLabelPattern } = inputList;
+  const { token, label, deleteLabelPattern, skipReviewerNamePattern } = inputList;
   // 라벨 JSON 문자열을 파싱합니다.
   const parseLabel = safeJsonParse<LabelInput>(label);
 
@@ -33,10 +33,11 @@ const validateGithubInputList = () => {
     message: 'Inputs received successfully.',
     label,
     deleteLabelPattern,
+    skipReviewerNamePattern,
   });
 
   // 검증된 입력값을 반환합니다.
-  return { token, parseLabel, deleteLabelPattern };
+  return { token, parseLabel, deleteLabelPattern, skipReviewerNamePattern };
 };
 
 export { validateGithubInputList };

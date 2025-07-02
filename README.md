@@ -6,11 +6,12 @@
 
 ## Inputs
 
-| 값                    | 설명                                                                   | 필수여부 |
-|----------------------|----------------------------------------------------------------------|------|
-| `token`              | GitHub에서 제공하는 토큰.                                                    | O    |
-| `label`              | 각 review state의 조건에 따라 부착되는 라벨의 값 approve / comment / request change | O    |
-| `deleteLabelPattern` | 일률적으로 삭제를 시킬 라벨의 glob pattern                                        | X    |
+| 값                         | 설명                                                                   | 필수여부 |
+|---------------------------|----------------------------------------------------------------------|------|
+| `token`                   | GitHub에서 제공하는 토큰.                                                    | O    |
+| `label`                   | 각 review state의 조건에 따라 부착되는 라벨의 값 approve / comment / request change | O    |
+| `deleteLabelPattern`      | 일률적으로 삭제를 시킬 라벨의 glob pattern                                        | X    |
+| `skipReviewerNamePattern` | glob를 사용하여 해당 액션을 실행 시키지 않을 리뷰어 이름 패턴입니다.                            | X    |
 
 ### label
 
@@ -45,7 +46,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: pr-auto-state-label
-        uses: ./
+        uses: jiro-developers/pr-auto-state-label@latest
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           label: >
