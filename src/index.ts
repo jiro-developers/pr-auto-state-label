@@ -31,9 +31,11 @@ const run = async (): Promise<void> => {
     const recentReviewList: {
       user?: string;
       state: ReviewState;
+      comment?: string;
     }[] = reviewList.slice(-2).map((review) => ({
       user: review?.user?.login,
       state: review.state as ReviewState,
+      comment: review.body_text,
     }));
 
     const [previousReview, currentReview] = recentReviewList;
@@ -89,6 +91,7 @@ const run = async (): Promise<void> => {
       message: 'Review states retrieved successfully.',
       reviewState: currentReviewState,
       previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
+      reviewComment: currentReview.comment,
       totalReviewCount: reviewList.length,
     });
 
