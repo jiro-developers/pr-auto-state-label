@@ -34306,6 +34306,7 @@ const run = async () => {
         const recentReviewList = reviewList.slice(-2).map((review) => ({
             user: review?.user?.login,
             state: review.state,
+            comment: review.body_text,
         }));
         const [previousReview, currentReview] = recentReviewList;
         // 리뷰어 정보 추출
@@ -34344,6 +34345,7 @@ const run = async () => {
             message: 'Review states retrieved successfully.',
             reviewState: currentReviewState,
             previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
+            reviewComment: currentReview.comment,
             totalReviewCount: reviewList.length,
         });
         // 모든 라벨 조회
