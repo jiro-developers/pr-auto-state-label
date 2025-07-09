@@ -1,3 +1,4 @@
+import type { Endpoints } from '@octokit/types';
 import type { REVIEW_STATE } from '@/constants/common';
 
 type RequiredActionInputKey =
@@ -14,4 +15,29 @@ type LabelInput = Record<'comment' | 'requestChange' | 'approve', string>;
 
 type ReviewState = (typeof REVIEW_STATE)[keyof typeof REVIEW_STATE];
 
-export type { ActionInputKey, RequiredActionInputKey, OptionalActionInputKey, LabelInput, ReviewState };
+// GitHub API 원본 타입
+type GitHubReview = Endpoints['GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews']['response']['data'][0];
+
+// GitHub 원본 타입을 기반으로 필요한 필드들만 오버라이딩
+type Review = Omit<GitHubReview, 'state' | 'submitted_at'> & {
+  state: ReviewState;
+  submitted_at: string;
+};
+
+// 최종 리뷰 상태 타입
+type FinalReviewState = {
+  user?: string;
+  state: ReviewState;
+  comment?: string | null;
+};
+
+export type { 
+  ActionInputKey, 
+  RequiredActionInputKey, 
+  OptionalActionInputKey, 
+  LabelInput, 
+  ReviewState,
+  GitHubReview,
+  Review,
+  FinalReviewState
+};

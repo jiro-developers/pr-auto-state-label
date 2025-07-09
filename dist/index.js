@@ -33942,6 +33942,7 @@ const REVIEW_STATE = {
     requestChange: 'CHANGES_REQUESTED',
     comment: 'COMMENTED',
 };
+const REVIEW_STATE_LIST = Object.values(REVIEW_STATE);
 const DEFAULT_REVIEW_STATE = 'unknown';
 
 
@@ -34037,6 +34038,48 @@ const getReviewListWithPaginate = async ({ token }) => {
         pull_number: pullRequestNumber,
         per_page: MAXIMUM_REVIEW_LIST_COUNT,
     });
+};
+
+
+;// CONCATENATED MODULE: ./src/utils/github/review/getReviewState.ts
+
+const getFinalReviewStatePerUser = (reviews) => {
+    // REVIEW_STATE_LIST에 포함된 상태와 유효한 사용자만 필터링
+    const validReviewList = reviews.filter((review) => {
+        return review.user?.login && review.submitted_at && REVIEW_STATE_LIST.includes(review.state);
+    });
+    // 고유한 사용자 목록 생성
+    const uniqueUserList = Array.from(new Set(validReviewList.map((review) => review.user.login)));
+    // 각 사용자별로 최신 리뷰 찾기
+    return uniqueUserList.map((userLogin) => {
+        const userReviewList = validReviewList
+            .filter((review) => review.user.login === userLogin)
+            .sort((firstReview, secondReview) => new Date(secondReview.submitted_at).getTime() - new Date(firstReview.submitted_at).getTime());
+        const latestReview = userReviewList[0];
+        return {
+            user: latestReview.user?.login,
+            state: latestReview.state,
+            comment: latestReview.body_text,
+        };
+    });
+};
+// PR 전체 상태 결정 (우선순위 적용)
+const getFinalPRState = (reviewList) => {
+    const finalReviewList = getFinalReviewStatePerUser(reviewList);
+    // 1순위: CHANGES_REQUESTED가 하나라도 있으면
+    if (finalReviewList.some((review) => review.state === 'CHANGES_REQUESTED')) {
+        return 'CHANGES_REQUESTED';
+    }
+    // 2순위: APPROVED가 하나라도 있으면 (CHANGES_REQUESTED가 없는 상태에서)
+    if (finalReviewList.some((review) => review.state === 'APPROVED')) {
+        return 'APPROVED';
+    }
+    // 3순위: COMMENTED만 있으면
+    if (finalReviewList.some((review) => review.state === 'COMMENTED')) {
+        return 'COMMENTED';
+    }
+    // 리뷰가 없는 상태
+    return DEFAULT_REVIEW_STATE;
 };
 
 
@@ -34162,9 +34205,8 @@ const handleLabelState = async ({ token, labelName, allLabelList, labelsToRemove
 
 
 
-const REVIEW_DECIDED_STATE = [REVIEW_STATE.approve, REVIEW_STATE.requestChange];
-const processReviewState = async ({ token, reviewState, previousReviewState, parseLabel, allLabelList, deleteLabelPattern, }) => {
-    const baseArgs = {
+const processReviewState = async ({ token, reviewState, parseLabel, allLabelList, deleteLabelPattern, }) => {
+    const baseArguments = {
         token,
         allLabelList,
         deleteLabelPattern,
@@ -34172,7 +34214,7 @@ const processReviewState = async ({ token, reviewState, previousReviewState, par
     // Request Change 상태 처리
     if (reviewState === REVIEW_STATE.requestChange) {
         await handleLabelState({
-            ...baseArgs,
+            ...baseArguments,
             labelName: parseLabel.requestChange,
             labelsToRemove: [parseLabel.approve, parseLabel.comment],
         });
@@ -34181,7 +34223,7 @@ const processReviewState = async ({ token, reviewState, previousReviewState, par
     // Approve 상태 처리
     if (reviewState === REVIEW_STATE.approve) {
         await handleLabelState({
-            ...baseArgs,
+            ...baseArguments,
             labelName: parseLabel.approve,
             labelsToRemove: [parseLabel.requestChange, parseLabel.comment],
         });
@@ -34189,16 +34231,8 @@ const processReviewState = async ({ token, reviewState, previousReviewState, par
     }
     // Comment 상태 처리
     if (reviewState === REVIEW_STATE.comment) {
-        const hasAlreadyBeenReviewed = REVIEW_DECIDED_STATE.includes(previousReviewState);
-        if (hasAlreadyBeenReviewed) {
-            logger.info({
-                message: `Last review state was ${previousReviewState}. No action needed.`,
-                currentState: reviewState,
-            });
-            return;
-        }
         await handleLabelState({
-            ...baseArgs,
+            ...baseArguments,
             labelName: parseLabel.comment,
             labelsToRemove: [parseLabel.requestChange, parseLabel.approve],
         });
@@ -34290,6 +34324,7 @@ const validateGithubInputList = () => {
 
 
 
+
 const run = async () => {
     try {
         logger.info('Start to run the action.');
@@ -34303,40 +34338,23 @@ const run = async () => {
             logger.info('No reviews found for this PR. No action needed.');
             return;
         }
-        const recentReviewList = reviewList.slice(-2).map((review) => ({
-            user: review?.user?.login,
-            state: review.state,
-            comment: review.body_text,
-        }));
-        const [previousReview, currentReview] = recentReviewList;
-        // 리뷰어 정보 추출
-        const previousReviewerName = previousReview?.user;
-        const currentReviewerName = currentReview?.user;
-        // 리뷰 상태 추출
-        const previousReviewState = previousReview?.state;
-        const currentReviewState = currentReview?.state;
-        // 현재 리뷰어 우선, 없으면 이전 리뷰어 사용
-        const activeReviewerName = currentReviewerName ?? previousReviewerName;
+        // 전체 리뷰 히스토리를 고려한 상태 결정
+        const currentReviewState = getFinalPRState(reviewList);
+        // 최신 리뷰어 정보 (skipReviewerNamePattern 검사용)
+        const latestReview = reviewList[reviewList.length - 1];
+        const currentReviewerName = latestReview?.user?.login;
         // 리뷰어 이름 패턴 검사
-        if (skipReviewerNamePattern && activeReviewerName) {
-            const isSkipPatternMatch = minimatch(activeReviewerName, skipReviewerNamePattern);
-            const patternMatchMessage = `Reviewer name "${activeReviewerName}" ${isSkipPatternMatch ? 'matches' : 'does not match'} the skip pattern "${skipReviewerNamePattern}".`;
+        if (skipReviewerNamePattern && currentReviewerName) {
+            const isSkipPatternMatch = minimatch(currentReviewerName, skipReviewerNamePattern);
+            const patternMatchMessage = `Reviewer name "${currentReviewerName}" ${isSkipPatternMatch ? 'matches' : 'does not match'} the skip pattern "${skipReviewerNamePattern}".`;
             logger.info(`${patternMatchMessage} ${isSkipPatternMatch ? 'Action will not proceed.' : 'Proceeding with action.'}`);
             if (isSkipPatternMatch) {
                 return;
             }
         }
-        if (!currentReviewState) {
+        if (!currentReviewState || !REVIEW_STATE_LIST.includes(currentReviewState)) {
             logger.info({
                 message: 'No current review state to process',
-                previousReviewState,
-            });
-            return;
-        }
-        // 현재 리뷰 상태와 이전 리뷰 상태가 동일한지 확인
-        if (currentReviewState === previousReviewState) {
-            logger.info({
-                message: 'Review state unchanged since last processing',
                 reviewState: currentReviewState,
             });
             return;
@@ -34344,8 +34362,7 @@ const run = async () => {
         logger.info({
             message: 'Review states retrieved successfully.',
             reviewState: currentReviewState,
-            previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
-            reviewComment: currentReview.comment,
+            reviewComment: latestReview?.body_text,
             totalReviewCount: reviewList.length,
         });
         // 모든 라벨 조회
@@ -34354,7 +34371,6 @@ const run = async () => {
         await processReviewState({
             token,
             reviewState: currentReviewState,
-            previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
             parseLabel,
             allLabelList,
             deleteLabelPattern,
