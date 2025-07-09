@@ -1,10 +1,11 @@
 import { minimatch } from 'minimatch';
 
-import { DEFAULT_REVIEW_STATE } from '@/constants/common';
-import type { ReviewState } from '@/types';
+import { REVIEW_STATE_LIST } from '@/constants/common';
+import type { Review } from '@/types';
 import { getAllLabel } from '@/utils/github/label/getAllLabel';
 import { logger } from '@/utils/github/logger';
 import { getReviewListWithPaginate } from '@/utils/github/review/getReviewListWithPaginate';
+import { getFinalPRState } from '@/utils/github/review/getReviewState';
 import { processReviewState } from '@/utils/github/review/processReviewState';
 import { validateGithubInputList } from '@/utils/github/validateGithubInputList';
 
@@ -28,34 +29,18 @@ const run = async (): Promise<void> => {
       return;
     }
 
-    const recentReviewList: {
-      user?: string;
-      state: ReviewState;
-      comment?: string;
-    }[] = reviewList.slice(-2).map((review) => ({
-      user: review?.user?.login,
-      state: review.state as ReviewState,
-      comment: review.body_text,
-    }));
+    // 전체 리뷰 히스토리를 고려한 상태 결정
+    const currentReviewState = getFinalPRState(reviewList as Review[]);
 
-    const [previousReview, currentReview] = recentReviewList;
-
-    // 리뷰어 정보 추출
-    const previousReviewerName = previousReview?.user;
-    const currentReviewerName = currentReview?.user;
-
-    // 리뷰 상태 추출
-    const previousReviewState = previousReview?.state;
-    const currentReviewState = currentReview?.state;
-
-    // 현재 리뷰어 우선, 없으면 이전 리뷰어 사용
-    const activeReviewerName = currentReviewerName ?? previousReviewerName;
+    // 최신 리뷰어 정보 (skipReviewerNamePattern 검사용)
+    const latestReview = reviewList[reviewList.length - 1];
+    const currentReviewerName = latestReview?.user?.login;
 
     // 리뷰어 이름 패턴 검사
-    if (skipReviewerNamePattern && activeReviewerName) {
-      const isSkipPatternMatch = minimatch(activeReviewerName, skipReviewerNamePattern);
+    if (skipReviewerNamePattern && currentReviewerName) {
+      const isSkipPatternMatch = minimatch(currentReviewerName, skipReviewerNamePattern);
 
-      const patternMatchMessage = `Reviewer name "${activeReviewerName}" ${
+      const patternMatchMessage = `Reviewer name "${currentReviewerName}" ${
         isSkipPatternMatch ? 'matches' : 'does not match'
       } the skip pattern "${skipReviewerNamePattern}".`;
 
@@ -68,19 +53,9 @@ const run = async (): Promise<void> => {
       }
     }
 
-    if (!currentReviewState) {
+    if (!currentReviewState || !REVIEW_STATE_LIST.includes(currentReviewState)) {
       logger.info({
         message: 'No current review state to process',
-        previousReviewState,
-      });
-
-      return;
-    }
-
-    // 현재 리뷰 상태와 이전 리뷰 상태가 동일한지 확인
-    if (currentReviewState === previousReviewState) {
-      logger.info({
-        message: 'Review state unchanged since last processing',
         reviewState: currentReviewState,
       });
 
@@ -90,8 +65,7 @@ const run = async (): Promise<void> => {
     logger.info({
       message: 'Review states retrieved successfully.',
       reviewState: currentReviewState,
-      previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
-      reviewComment: currentReview.comment,
+      reviewComment: latestReview?.body_text,
       totalReviewCount: reviewList.length,
     });
 
@@ -102,7 +76,6 @@ const run = async (): Promise<void> => {
     await processReviewState({
       token,
       reviewState: currentReviewState,
-      previousReviewState: previousReviewState ?? DEFAULT_REVIEW_STATE,
       parseLabel,
       allLabelList,
       deleteLabelPattern,

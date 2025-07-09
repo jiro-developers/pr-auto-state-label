@@ -28,6 +28,8 @@ const REVIEW_STATE = {
   comment: 'COMMENTED',
 } as const;
 
+const REVIEW_STATE_LIST = Object.values(REVIEW_STATE);
+
 const DEFAULT_REVIEW_STATE = 'unknown';
 
 export {
@@ -36,4 +38,5 @@ export {
   OPTIONAL_ACTION_INPUT_KEY_LIST,
   REVIEW_STATE,
   DEFAULT_REVIEW_STATE,
+  REVIEW_STATE_LIST,
 };
