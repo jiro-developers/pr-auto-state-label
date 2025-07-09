@@ -34353,8 +34353,6 @@ const run = async () => {
             logger.info('No reviews found for this PR. No action needed.');
             return;
         }
-        // 전체 리뷰 히스토리를 고려한 상태 결정
-        const currentReviewState = getFinalPRState(reviewList);
         // 최신 리뷰어 정보 (skipReviewerNamePattern 검사용)
         const latestReview = reviewList[reviewList.length - 1];
         const currentReviewerName = latestReview?.user?.login;
@@ -34367,6 +34365,8 @@ const run = async () => {
                 return;
             }
         }
+        // 전체 리뷰 히스토리를 고려한 상태 결정
+        const currentReviewState = getFinalPRState(reviewList);
         if (!currentReviewState || !REVIEW_STATE_LIST.includes(currentReviewState)) {
             logger.info({
                 message: 'No current review state to process',
