@@ -29,9 +29,6 @@ const run = async (): Promise<void> => {
       return;
     }
 
-    // 전체 리뷰 히스토리를 고려한 상태 결정
-    const currentReviewState = getFinalPRState(reviewList as Review[]);
-
     // 최신 리뷰어 정보 (skipReviewerNamePattern 검사용)
     const latestReview = reviewList[reviewList.length - 1];
     const currentReviewerName = latestReview?.user?.login;
@@ -52,6 +49,9 @@ const run = async (): Promise<void> => {
         return;
       }
     }
+
+    // 전체 리뷰 히스토리를 고려한 상태 결정
+    const currentReviewState = getFinalPRState(reviewList as Review[]);
 
     if (!currentReviewState || !REVIEW_STATE_LIST.includes(currentReviewState)) {
       logger.info({
