@@ -1,5 +1,6 @@
-import { DEFAULT_REVIEW_STATE, REVIEW_STATE_LIST } from '@/constants/common';
+import { DEFAULT_REVIEW_STATE, REVIEW_STATE, REVIEW_STATE_LIST } from '@/constants/common';
 import type { FinalReviewState, Review, ReviewState } from '@/types';
+import { logger } from '@/utils/github/logger';
 
 const getFinalReviewStatePerUser = (reviews: Review[]): FinalReviewState[] => {
   // REVIEW_STATE_LIST에 포함된 상태와 유효한 사용자만 필터링
@@ -10,7 +11,7 @@ const getFinalReviewStatePerUser = (reviews: Review[]): FinalReviewState[] => {
   // 고유한 사용자 목록 생성
   const uniqueUserList = Array.from(new Set(validReviewList.map((review) => review.user!.login)));
 
-  // 각 사용자별로 최신 리뷰 찾기
+  // 각 사용자별로 최종 상태 결정
   return uniqueUserList.map((userLogin) => {
     const userReviewList = validReviewList
       .filter((review) => review.user!.login === userLogin)
@@ -19,12 +20,26 @@ const getFinalReviewStatePerUser = (reviews: Review[]): FinalReviewState[] => {
           new Date(secondReview.submitted_at).getTime() - new Date(firstReview.submitted_at).getTime()
       );
 
-    const latestReview = userReviewList[0];
+    // 최신 meaningful 상태 찾기 (APPROVED 또는 CHANGES_REQUESTED)
+    const latestDecisiveReview = userReviewList.find(
+      (review) => review.state === REVIEW_STATE.approve || review.state === REVIEW_STATE.requestChange
+    );
+
+    // meaningful 상태가 있으면 그것을 사용, 없으면 최신 COMMENTED 사용
+    const finalReview = latestDecisiveReview || userReviewList[0];
+
+    logger.info({
+      message: 'Latest decisive review for user',
+      user: userLogin,
+      latestDecisiveReview,
+      userReviewList,
+      finalReview,
+    });
 
     return {
-      user: latestReview.user?.login,
-      state: latestReview.state,
-      comment: latestReview.body_text,
+      user: finalReview.user?.login,
+      state: finalReview.state,
+      comment: userReviewList[0].body_text, // 최신 코멘트 사용
     };
   });
 };
@@ -32,6 +47,11 @@ const getFinalReviewStatePerUser = (reviews: Review[]): FinalReviewState[] => {
 // PR 전체 상태 결정 (우선순위 적용)
 const getFinalPRState = (reviewList: Review[]): ReviewState => {
   const finalReviewList = getFinalReviewStatePerUser(reviewList);
+
+  logger.info({
+    message: 'Final review state per user',
+    finalReviewList,
+  });
 
   // 1순위: CHANGES_REQUESTED가 하나라도 있으면
   if (finalReviewList.some((review) => review.state === 'CHANGES_REQUESTED')) {
